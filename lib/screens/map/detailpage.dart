@@ -75,22 +75,17 @@ class _DetailPageState extends State<DetailPage>
     }
   }
 
+  // 콘텐츠 정보를 가져오는 함수
   Future<void> _fetchContentDetails() async {
     const apiKey =
         'K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D';
     final apiUrl =
-        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=${Uri.encodeComponent(widget.name)}&numOfRows=10&pageNo=1&_type=json';
+        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=${widget.name}&numOfRows=10&pageNo=1&_type=json';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}'); // API 응답을 출력
-
       if (response.statusCode == 200) {
-        // JSON 데이터를 파싱할 때는 추가적인 디코딩 없이 바로 response.body를 사용
-        final decodedData = json.decode(response.body);
-        print('Decoded Data: $decodedData');
-
+        final decodedData = json.decode(utf8.decode(response.bodyBytes));
         if (decodedData['response'] != null &&
             decodedData['response']['body'] != null &&
             decodedData['response']['body']['items'] != null) {
@@ -100,13 +95,11 @@ class _DetailPageState extends State<DetailPage>
             _images = (decodedData['response']['body']['items']['item'] as List)
                 .where((item) => item['firstimage'] != null)
                 .map((item) => item['firstimage'].toString())
-                .toList();
+                .toList(); // 이미지 가져오기
           });
-        } else {
-          print('Invalid response structure');
         }
       } else {
-        print('Failed to load data: ${response.statusCode}');
+        throw Exception('Failed to load data');
       }
     } catch (e) {
       print('Error fetching content details: $e');
