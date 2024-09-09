@@ -89,10 +89,11 @@ class Favorite extends StatelessWidget {
           builder: (context) => DetailPage(
             name: store['name'],
             subname: store['subname'],
-            data: store.data() as Map<String, dynamic>,
+
             address: store['address'],
             id: store.id,
-            collectionName: store.reference.parent.id, // 컬렉션 이름을 가져옵니다
+            collectionName: store.reference.parent.id,
+            contentTypeId: '', // 컬렉션 이름을 가져옵니다
           ),
         ),
       ),

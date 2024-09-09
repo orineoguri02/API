@@ -126,12 +126,13 @@ class _MapPageState extends State<MapPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => DetailPage(
-                        name: data['name'],
-                        subname: '',
-                        data: data,
-                        address: data['address'],
-                        id: doc.id,
-                        collectionName: doc.reference.parent.id), // 컬렉션 이름 추가
+                      name: data['name'],
+                      subname: '',
+                      address: data['address'],
+                      id: doc.id,
+                      collectionName: doc.reference.parent.id,
+                      contentTypeId: '',
+                    ), // 컬렉션 이름 추가
                   ),
                 );
               },
@@ -237,13 +238,14 @@ class _MapPageState extends State<MapPage> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => DetailPage(
-                                name: data['name'] ?? 'No Name',
-                                data: data,
-                                address: data['address'] ?? 'No Address',
-                                subname: data['subname'],
-                                id: widget.allDocuments[index].id,
-                                collectionName: widget.allDocuments[index]
-                                    .reference.parent.id), // 컬렉션 이름 전달
+                              name: data['name'] ?? 'No Name',
+                              address: data['address'] ?? 'No Address',
+                              subname: data['subname'],
+                              id: widget.allDocuments[index].id,
+                              collectionName: widget
+                                  .allDocuments[index].reference.parent.id,
+                              contentTypeId: '',
+                            ), // 컬렉션 이름 전달
                           ),
                         );
                       },

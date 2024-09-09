@@ -113,12 +113,13 @@ class _MapPageState extends State<MapPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => DetailPage(
-                        name: data['name'],
-                        subname: '',
-                        data: data,
-                        address: data['address'],
-                        id: doc.id,
-                        collectionName: 'cafe'), // DetailPage로 이동
+                      name: data['name'],
+                      subname: '',
+                      address: data['address'],
+                      id: doc.id,
+                      collectionName: 'cafe',
+                      contentTypeId: '',
+                    ), // DetailPage로 이동
                   ),
                 );
               },
@@ -225,12 +226,13 @@ class _MapPageState extends State<MapPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => DetailPage(
-                              name: data['name'] ?? 'No Name',
-                              data: data,
-                              address: data['address'] ?? 'No Address',
-                              subname: data['subname'],
-                              id: data['id'],
-                              collectionName: 'cafe'),
+                            name: data['name'] ?? 'No Name',
+                            address: data['address'] ?? 'No Address',
+                            subname: data['subname'],
+                            id: data['id'],
+                            collectionName: 'cafe',
+                            contentTypeId: '',
+                          ),
                         ),
                       );
                     },

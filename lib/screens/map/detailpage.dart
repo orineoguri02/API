@@ -1,28 +1,29 @@
 import 'dart:collection';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/infobar.dart';
 import 'package:flutter_application_1/screens/menubar.dart';
 import 'package:flutter_application_1/screens/reviewbar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class DetailPage extends StatefulWidget {
   final String name;
   final String address;
   final String subname;
-  final Map<String, dynamic> data;
   final String id;
-  final String collectionName; // 컬렉션 이름 추가
+  final String collectionName;
+  final String contentTypeId;
 
   DetailPage({
     super.key,
     required this.name,
     required this.subname,
-    required this.data,
     required this.address,
     required this.id,
-    required this.collectionName, // 컬렉션 이름 초기화
+    required this.collectionName,
+    required this.contentTypeId,
   });
 
   @override
@@ -35,12 +36,15 @@ class _DetailPageState extends State<DetailPage>
   final FavoriteService _favoriteService = FavoriteService();
   bool _isFavorited = false;
   late TabController _tabController;
+  List<String> _images = [];
+  Map<String, dynamic>? _contentDetails; // API로 받아온 콘텐츠 정보
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _checkFavoriteStatus();
+    _fetchContentDetails(); // API에서 콘텐츠 정보 가져오기
   }
 
   @override
@@ -71,14 +75,46 @@ class _DetailPageState extends State<DetailPage>
     }
   }
 
+  Future<void> _fetchContentDetails() async {
+    const apiKey =
+        'K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D';
+    final apiUrl =
+        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=${Uri.encodeComponent(widget.name)}&numOfRows=10&pageNo=1&_type=json';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}'); // API 응답을 출력
+
+      if (response.statusCode == 200) {
+        // JSON 데이터를 파싱할 때는 추가적인 디코딩 없이 바로 response.body를 사용
+        final decodedData = json.decode(response.body);
+        print('Decoded Data: $decodedData');
+
+        if (decodedData['response'] != null &&
+            decodedData['response']['body'] != null &&
+            decodedData['response']['body']['items'] != null) {
+          var item = decodedData['response']['body']['items']['item'][0];
+          setState(() {
+            _contentDetails = item; // 콘텐츠 상세 정보 저장
+            _images = (decodedData['response']['body']['items']['item'] as List)
+                .where((item) => item['firstimage'] != null)
+                .map((item) => item['firstimage'].toString())
+                .toList();
+          });
+        } else {
+          print('Invalid response structure');
+        }
+      } else {
+        print('Failed to load data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching content details: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    List<String> images = widget.data['images'] is List
-        ? List<String>.from(widget.data['images'])
-        : [];
-    List<String> banners = widget.data['banner'] is List
-        ? List<String>.from(widget.data['banner'])
-        : [];
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 90,
@@ -104,20 +140,6 @@ class _DetailPageState extends State<DetailPage>
                 widget.address,
                 style: TextStyle(fontSize: 14),
               ),
-              SizedBox(height: 4),
-              if (images.isNotEmpty)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Image.network(
-                      images[0],
-                      height: 17,
-                      fit: BoxFit.contain,
-                    ),
-                  ],
-                )
-              else
-                Text('아직 만드는 중...'),
             ],
           ),
         ),
@@ -155,13 +177,13 @@ class _DetailPageState extends State<DetailPage>
           children: [
             Row(
               children: [
-                SizedBox(width: 35), // 왼쪽 여백
+                SizedBox(width: 35),
                 ...List.generate(
                   3,
                   (index) {
-                    if (images.length > index + 1) {
+                    if (_images.length > index + 1) {
                       return Image.network(
-                        images[index + 1],
+                        _images[index + 1],
                         width: 80,
                         fit: BoxFit.contain,
                       );
@@ -172,35 +194,31 @@ class _DetailPageState extends State<DetailPage>
               ],
             ),
             SizedBox(height: 17),
-            if (banners.isNotEmpty)
+            if (_images.isNotEmpty)
               SizedBox(
                 height: 190,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: banners.length,
+                  itemCount: _images.length,
                   itemBuilder: (context, index) {
-                    String imageUrl = banners[index];
-                    if (imageUrl.isNotEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15.0),
-                          child: Image.network(
-                            imageUrl,
-                            width: 250,
-                            fit: BoxFit.cover,
-                          ),
+                    String imageUrl = _images[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15.0),
+                        child: Image.network(
+                          imageUrl,
+                          width: 250,
+                          fit: BoxFit.cover,
                         ),
-                      );
-                    } else {
-                      return Center(child: Text('이미지가 없습니다.'));
-                    }
+                      ),
+                    );
                   },
                 ),
               )
             else
               Text(
-                '아직 만드는 중',
+                '이미지가 없습니다.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             SizedBox(height: 8.0),
@@ -240,23 +258,25 @@ class _DetailPageState extends State<DetailPage>
                 controller: _tabController,
                 children: [
                   ReviewPage(
-                    collectionName: widget.collectionName, // 컬렉션 이름 전달
-                    id: widget.id,
-                    ratingFields: LinkedHashMap<String, String>.from({
-                      '총별점': '    총점',
-                      '출입': '휠체어 출입',
-                      '좌석': '휠체어 좌석',
-                      '친절': '   친절도',
-                    }),
-                  ),
-                  InfoPage(
                     collectionName: widget.collectionName,
                     id: widget.id,
+                    ratingFields: LinkedHashMap<String, String>.from({
+                      '총별점': '총점',
+                      '출입': '휠체어 출입',
+                      '좌석': '휠체어 좌석',
+                      '친절': '친절도',
+                    }),
+                  ),
+                  // InfoPage에 콘텐츠 정보를 넘겨줌
+                  InfoPage(
+                    contentId: widget.id,
+                    contentTypeId: widget.contentTypeId,
+                    contentDetails: _contentDetails, // 콘텐츠 정보 전달
                   ),
                   menubar(
                     collectionName: widget.collectionName,
                     id: widget.id,
-                  )
+                  ),
                 ],
               ),
             ),
@@ -269,12 +289,12 @@ class _DetailPageState extends State<DetailPage>
 
 class FavoriteService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   Future<void> addFavorite(String userId, String storeId) async {
     DocumentReference userRef = _firestore.collection('users').doc(userId);
     return _firestore.runTransaction((transaction) async {
       DocumentSnapshot snapshot = await transaction.get(userRef);
       if (!snapshot.exists) {
-        // 사용자 문서가 없으면 새로 생성
         transaction.set(userRef, {
           'favorites': [storeId]
         });
@@ -284,8 +304,6 @@ class FavoriteService {
         if (!favorites.contains(storeId)) {
           favorites.add(storeId);
           transaction.update(userRef, {'favorites': favorites});
-
-          print(storeId);
         }
       }
     });

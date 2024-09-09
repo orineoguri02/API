@@ -1,59 +1,65 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class InfoPage extends StatelessWidget {
-  final String collectionName;
-  final String id;
+  final String contentId;
+  final String contentTypeId;
+  final Map<String, dynamic>? contentDetails; // 콘텐츠 정보
 
   const InfoPage({
     super.key,
-    required this.collectionName,
-    required this.id,
+    required this.contentId,
+    required this.contentTypeId,
+    this.contentDetails, // 콘텐츠 정보를 받음
   });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection(collectionName)
-            .doc(id)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return Center(child: Text('No data available for this document'));
-          }
+    if (contentDetails == null) {
+      return Center(
+        child: Text('정보를 불러오는 중입니다.'),
+      );
+    }
 
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          var open = data['open'] as String?;
-          var call = data['call'] as String?;
+    var openTime = contentDetails!['opentimefood'] as String?;
+    var call = contentDetails!['chkcreditcardfood'] as String?;
+    var seat = contentDetails!['seat'] as String?;
+    var menu = contentDetails!['infocenterfood'] as String?;
+    var parking = contentDetails!['parkingfood'] as String?;
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoSection(
-                  icon: Icons.access_time,
-                  title: '영업시간',
-                  content:
-                      open != null ? open.replaceAll('\\n', '\n') : '정보 없음',
-                ),
-                Divider(thickness: 0.7, color: Colors.grey),
-                _buildInfoSection(
-                  icon: Icons.phone,
-                  title: '전화번호',
-                  content: call ?? '정보 없음',
-                ),
-              ],
-            ),
-          );
-        },
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoSection(
+            icon: Icons.access_time,
+            title: '영업시간',
+            content: openTime ?? '정보 없음',
+          ),
+          Divider(thickness: 0.7, color: Colors.grey),
+          _buildInfoSection(
+            icon: Icons.phone,
+            title: '카드 결제 여부',
+            content: call ?? '정보 없음',
+          ),
+          Divider(thickness: 0.7, color: Colors.grey),
+          _buildInfoSection(
+            icon: Icons.event_seat,
+            title: '좌석 정보',
+            content: seat ?? '정보 없음',
+          ),
+          Divider(thickness: 0.7, color: Colors.grey),
+          _buildInfoSection(
+            icon: Icons.restaurant_menu,
+            title: '메뉴 정보',
+            content: menu ?? '정보 없음',
+          ),
+          Divider(thickness: 0.7, color: Colors.grey),
+          _buildInfoSection(
+            icon: Icons.local_parking,
+            title: '주차 정보',
+            content: parking ?? '정보 없음',
+          ),
+        ],
       ),
     );
   }
