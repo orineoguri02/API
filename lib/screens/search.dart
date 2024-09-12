@@ -130,7 +130,6 @@ class _SearchState extends State<Search> {
                                   address: data['address'] ?? 'No Address',
                                   subname: data['subname'] ?? '',
                                   id: item['id'],
-                                  contentTypeId: '',
                                 ),
                               ),
                             ),

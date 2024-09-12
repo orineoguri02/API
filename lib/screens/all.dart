@@ -131,7 +131,6 @@ class _MapPageState extends State<MapPage> {
                       address: data['address'],
                       id: doc.id,
                       collectionName: doc.reference.parent.id,
-                      contentTypeId: '',
                     ), // 컬렉션 이름 추가
                   ),
                 );
@@ -244,7 +243,6 @@ class _MapPageState extends State<MapPage> {
                               id: widget.allDocuments[index].id,
                               collectionName: widget
                                   .allDocuments[index].reference.parent.id,
-                              contentTypeId: '',
                             ), // 컬렉션 이름 전달
                           ),
                         );

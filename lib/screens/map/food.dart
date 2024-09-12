@@ -234,7 +234,6 @@ class _MapPageState extends State<MapPage> {
                               address: restaurant['addr1'],
                               subname: '',
                               id: restaurant['contentid'].toString(),
-                              contentTypeId: '',
                             ),
                           ),
                         );

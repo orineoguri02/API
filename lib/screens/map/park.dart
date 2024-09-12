@@ -118,7 +118,6 @@ class _MapPageState extends State<MapPage> {
                       subname: '',
                       address: data['address'],
                       id: doc.id,
-                      contentTypeId: '',
                     ), // DetailPage로 이동
                   ),
                 );
@@ -233,7 +232,6 @@ class _MapPageState extends State<MapPage> {
                               address: data['address'] ?? 'No Address',
                               subname: data['subname'],
                               id: data['id'],
-                              contentTypeId: '',
                             ),
                           ),
                         );

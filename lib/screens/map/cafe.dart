@@ -118,7 +118,6 @@ class _MapPageState extends State<MapPage> {
                       address: data['address'],
                       id: doc.id,
                       collectionName: 'cafe',
-                      contentTypeId: '',
                     ), // DetailPage로 이동
                   ),
                 );
@@ -231,7 +230,6 @@ class _MapPageState extends State<MapPage> {
                             subname: data['subname'],
                             id: data['id'],
                             collectionName: 'cafe',
-                            contentTypeId: '',
                           ),
                         ),
                       );

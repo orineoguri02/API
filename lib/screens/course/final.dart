@@ -144,7 +144,7 @@ class _CosFrameState extends State<CosFrame> {
                                   address: data['address'] ?? 'No Address',
                                   subname: data['subname'] ?? '',
 
-                                  id: docId, contentTypeId: '', // 문서 ID 전달
+                                  id: docId,
                                 ),
                               ),
                             );

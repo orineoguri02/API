@@ -1,30 +1,95 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class InfoPage extends StatelessWidget {
+class InfoPage extends StatefulWidget {
   final String contentId;
   final String contentTypeId;
-  final Map<String, dynamic>? contentDetails; // 콘텐츠 정보
 
   const InfoPage({
     super.key,
     required this.contentId,
     required this.contentTypeId,
-    this.contentDetails, // 콘텐츠 정보를 받음
   });
 
   @override
+  _InfoPageState createState() => _InfoPageState();
+}
+
+class _InfoPageState extends State<InfoPage> {
+  Map<String, dynamic>? _contentDetails;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchContentDetails();
+  }
+
+  Future<void> _fetchContentDetails() async {
+    try {
+      // 콘텐츠 아이디 기반 조회를 위한 API URL
+      final response = await http.get(
+        Uri.parse(
+          'http://apis.data.go.kr/B551011/KorWithService1/detailCommon1?serviceKey=K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D&MobileOS=ETC&MobileApp=AppTest&contentId=${widget.contentId}&contentTypeId=${widget.contentTypeId}&defaultYN=Y&firstImageYN=Y&areacodeYN=Y&catcodeYN=Y&addrinfoYN=Y&mapinfoYN=Y&overviewYN=Y&_type=json',
+        ),
+        headers: {
+          'Accept': 'application/json', // JSON 응답을 명시적으로 요청
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // UTF-8 디코딩 처리
+        final decodedData = json.decode(utf8.decode(response.bodyBytes));
+        print(
+            'Response Body: ${utf8.decode(response.bodyBytes)}'); // 디버깅을 위해 추가
+
+        var items = decodedData['response']?['body']?['items']?['item'];
+
+        // items가 없는 경우 처리
+        if (items == null || items.isEmpty) {
+          print('No items found for the given contentId: ${widget.contentId}');
+          setState(() {
+            _hasError = true;
+            _contentDetails = null;
+          });
+        } else {
+          var item = items[0]; // 첫 번째 항목 사용
+          setState(() {
+            _contentDetails = {
+              'opentimefood': item['opentimefood'],
+              'chkcreditcardfood': item['chkcreditcardfood'],
+              'seat': item['seat'],
+              'infocenterfood': item['infocenterfood'],
+              'parkingfood': item['parkingfood'],
+              'overview': item['overview'],
+              'addr1': item['addr1'],
+            };
+          });
+        }
+      } else {
+        setState(() {
+          _hasError = true;
+        });
+        print('Failed to load data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+      });
+      print('Error fetching content details: ${e.toString()}');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (contentDetails == null) {
+    if (_contentDetails == null) {
       return Center(
-        child: Text('정보를 불러오는 중입니다.'),
+        child: _hasError
+            ? Text('데이터를 불러오는 중 문제가 발생했습니다.')
+            : CircularProgressIndicator(),
       );
     }
-
-    var openTime = contentDetails!['opentimefood'] as String?;
-    var call = contentDetails!['chkcreditcardfood'] as String?;
-    var seat = contentDetails!['seat'] as String?;
-    var menu = contentDetails!['infocenterfood'] as String?;
-    var parking = contentDetails!['parkingfood'] as String?;
 
     return SingleChildScrollView(
       child: Column(
@@ -33,31 +98,31 @@ class InfoPage extends StatelessWidget {
           _buildInfoSection(
             icon: Icons.access_time,
             title: '영업시간',
-            content: openTime ?? '정보 없음',
+            content: _contentDetails?['opentimefood'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.phone,
             title: '카드 결제 여부',
-            content: call ?? '정보 없음',
+            content: _contentDetails?['chkcreditcardfood'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.event_seat,
             title: '좌석 정보',
-            content: seat ?? '정보 없음',
+            content: _contentDetails?['overview'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.restaurant_menu,
             title: '메뉴 정보',
-            content: menu ?? '정보 없음',
+            content: _contentDetails?['infocenterfood'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.local_parking,
             title: '주차 정보',
-            content: parking ?? '정보 없음',
+            content: _contentDetails?['parkingfood'] ?? '정보 없음',
           ),
         ],
       ),
