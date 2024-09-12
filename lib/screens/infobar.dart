@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:html/parser.dart'; // HTML 파싱을 위해 추가
 
 class InfoPage extends StatefulWidget {
   final String contentId;
@@ -58,12 +59,13 @@ class _InfoPageState extends State<InfoPage> {
           setState(() {
             _contentDetails = {
               'opentimefood': item['opentimefood'],
-              'chkcreditcardfood': item['chkcreditcardfood'],
               'seat': item['seat'],
               'infocenterfood': item['infocenterfood'],
               'parkingfood': item['parkingfood'],
               'overview': item['overview'],
               'addr1': item['addr1'],
+              // HTML 태그를 제거한 홈페이지 링크
+              'homepage': removeHtmlTags(item['homepage']),
             };
           });
         }
@@ -79,6 +81,12 @@ class _InfoPageState extends State<InfoPage> {
       });
       print('Error fetching content details: ${e.toString()}');
     }
+  }
+
+  // HTML 태그 제거 함수
+  String removeHtmlTags(String htmlString) {
+    final document = parse(htmlString);
+    return parse(document.body!.text).documentElement!.text;
   }
 
   @override
@@ -103,8 +111,8 @@ class _InfoPageState extends State<InfoPage> {
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.phone,
-            title: '카드 결제 여부',
-            content: _contentDetails?['chkcreditcardfood'] ?? '정보 없음',
+            title: '대표전화',
+            content: _contentDetails?['infocenterfood'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
@@ -114,9 +122,9 @@ class _InfoPageState extends State<InfoPage> {
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
-            icon: Icons.restaurant_menu,
-            title: '메뉴 정보',
-            content: _contentDetails?['infocenterfood'] ?? '정보 없음',
+            icon: Icons.home,
+            title: '홈페이지',
+            content: _contentDetails?['homepage'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
