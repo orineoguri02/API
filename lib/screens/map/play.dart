@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/screens/map/detailpage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PlayFrame extends StatelessWidget {
   const PlayFrame({super.key});
@@ -9,8 +10,8 @@ class PlayFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('play').snapshots(),
+      body: FutureBuilder<List<dynamic>>(
+        future: fetchRestaurants(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -18,21 +19,52 @@ class PlayFrame extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(child: Text('No data available'));
           }
 
-          return MapPage(play: snapshot.data!.docs);
+          return MapPage(restaurant: snapshot.data!);
         },
       ),
     );
   }
+
+  Future<List<dynamic>> fetchRestaurants() async {
+    const apiKey =
+        'K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D';
+    const apiUrl =
+        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=공연&numOfRows=20&pageNo=1&_type=json';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        final decodedData = json.decode(utf8.decode(response.bodyBytes));
+        if (decodedData['response'] != null &&
+            decodedData['response']['body'] != null &&
+            decodedData['response']['body']['items'] != null) {
+          // 이미지가 있는 데이터만 필터링하여 반환
+          return (decodedData['response']['body']['items']['item'] as List)
+              .where((item) =>
+                  item['firstimage'] != null &&
+                  item['firstimage'].toString().isNotEmpty)
+              .toList();
+        } else {
+          throw Exception('Invalid response structure');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      throw Exception('Error fetching restaurants: $e');
+    }
+  }
 }
 
 class MapPage extends StatefulWidget {
-  final List<DocumentSnapshot> play;
+  final List<dynamic> restaurant;
 
-  MapPage({super.key, required this.play});
+  MapPage({super.key, required this.restaurant});
 
   @override
   _MapPageState createState() => _MapPageState();
@@ -87,61 +119,29 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _createMarkers() async {
-    // 로딩 시작
     setState(() {
       _markers.clear();
     });
 
-    try {
-      QuerySnapshot locationSnapshot =
-          await FirebaseFirestore.instance.collection('play').get();
+    for (var restaurant in widget.restaurant) {
+      double latitude = double.parse(restaurant['mapy']);
+      double longitude = double.parse(restaurant['mapx']);
 
-      // 각 문서에 대해 마커 생성
-      for (var doc in locationSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data['location'] != null) {
-          GeoPoint geoPoint = data['location'];
+      Marker marker = Marker(
+        markerId: MarkerId(restaurant['contentid'].toString()),
+        position: LatLng(latitude, longitude),
+        infoWindow: InfoWindow(
+          title: restaurant['title'],
+          snippet: restaurant['addr1'],
+        ),
+      );
 
-          Marker marker = Marker(
-            markerId: MarkerId(doc.id), // 문서 ID를 마커 ID로 사용
-            position: LatLng(geoPoint.latitude, geoPoint.longitude), // 위치 설정
-            infoWindow: InfoWindow(
-              title: data['name'], // 정보 창 제목
-              onTap: () {
-                // 정보 창 클릭 시 DetailPage로 이동
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DetailPage(
-                      collectionName: 'play',
-                      name: data['name'],
-                      subname: '',
-                      address: data['address'],
-                      id: doc.id,
-                    ), // DetailPage로 이동
-                  ),
-                );
-              },
-            ),
-          );
-
-          setState(() {
-            _markers.add(marker);
-          });
-        }
-      }
       setState(() {
-// 로딩 종료
+        _markers.add(marker);
       });
-    } catch (e) {
-      // 오류 처리 (예: 로그 출력)
-      print('Error fetching locations: $e');
-    } finally {
-      setState(() {
-// 로딩 상태 업데이트
-      });
-      _adjustCameraToFitMarkers();
     }
+
+    _adjustCameraToFitMarkers();
   }
 
   void _moveCamera(LatLng position) {
@@ -189,7 +189,6 @@ class _MapPageState extends State<MapPage> {
           GoogleMap(
             onMapCreated: (GoogleMapController controller) {
               _mapController = controller;
-              // 지도가 생성된 후 마커를 생성하고 카메라를 조정합니다.
               _createMarkers();
             },
             initialCameraPosition: CameraPosition(
@@ -207,78 +206,38 @@ class _MapPageState extends State<MapPage> {
                 color: Colors.white,
                 child: ListView.builder(
                   controller: scrollController,
-                  itemCount: widget.play.length,
+                  itemCount: widget.restaurant.length,
                   itemBuilder: (context, index) {
-                    Map<String, dynamic> data =
-                        widget.play[index].data() as Map<String, dynamic>;
-                    List<String> banner = data['banner'] is List
-                        ? List<String>.from(data['banner'])
-                        : [];
-                    return ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(16), // 원하는 패딩 설정
-                        elevation: 2, // 그림자 효과
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // 모서리 둥글게
-                        ),
+                    var restaurant = widget.restaurant[index];
+                    String imageUrl =
+                        restaurant['firstimage'] ?? ''; // 이미지 URL 가져오기
+
+                    return ListTile(
+                      leading: Image.network(
+                        imageUrl,
+                        height: 80,
+                        width: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.error); // 이미지 로드 실패 시 에러 아이콘
+                        },
                       ),
-                      onPressed: () {
+                      title: Text(restaurant['title']),
+                      subtitle: Text(restaurant['addr1']),
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => DetailPage(
-                              collectionName: 'play',
-                              name: data['name'] ?? 'No Name',
-                              address: data['address'] ?? 'No Address',
-                              subname: data['subname'],
-                              id: data['id'],
+                              collectionName: 'restaurant',
+                              name: restaurant['title'],
+                              address: restaurant['addr1'],
+                              subname: '',
+                              id: restaurant['contentid'].toString(),
                             ),
                           ),
                         );
                       },
-                      child: Row(
-                        children: [
-                          if (banner.isNotEmpty)
-                            Image.network(
-                              banner[0],
-                              height: 100,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                    Icons.error); // 이미지 로드 실패 시 에러 아이콘 표시
-                              },
-                            )
-                          else
-                            Container(
-                              height: 100,
-                              width: 100,
-                              color: Colors.grey, // 이미지가 없을 때 회색 박스 표시
-                              child: Icon(Icons.image_not_supported),
-                            ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data['name'] ?? 'No Name',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black),
-                                ),
-                                Text(
-                                  data['subname'] ?? 'No subname',
-                                  style: TextStyle(
-                                      fontSize: 15, color: Colors.black),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                     );
                   },
                 ),

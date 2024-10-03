@@ -33,7 +33,7 @@ class Frame extends StatelessWidget {
     const apiKey =
         'K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D';
     const apiUrl =
-        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=카페&numOfRows=20&pageNo=1&_type=json';
+        'http://apis.data.go.kr/B551011/KorWithService1/searchKeyword1?serviceKey=$apiKey&MobileOS=ETC&MobileApp=AppTest&keyword=백화점&numOfRows=20&pageNo=1&_type=json';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));

@@ -29,51 +29,82 @@ class _InfoPageState extends State<InfoPage> {
 
   Future<void> _fetchContentDetails() async {
     try {
-      // 콘텐츠 아이디 기반 조회를 위한 API URL
-      final response = await http.get(
+      // 공통 정보 조회를 위한 API URL
+      final commonResponse = await http.get(
         Uri.parse(
           'http://apis.data.go.kr/B551011/KorWithService1/detailCommon1?serviceKey=K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D&MobileOS=ETC&MobileApp=AppTest&contentId=${widget.contentId}&contentTypeId=${widget.contentTypeId}&defaultYN=Y&firstImageYN=Y&areacodeYN=Y&catcodeYN=Y&addrinfoYN=Y&mapinfoYN=Y&overviewYN=Y&_type=json',
         ),
         headers: {
-          'Accept': 'application/json', // JSON 응답을 명시적으로 요청
+          'Accept': 'application/json',
         },
       );
 
-      if (response.statusCode == 200) {
-        // UTF-8 디코딩 처리
-        final decodedData = json.decode(utf8.decode(response.bodyBytes));
-        print(
-            'Response Body: ${utf8.decode(response.bodyBytes)}'); // 디버깅을 위해 추가
+      // 소개 정보 조회를 위한 API URL
+      final introResponse = await http.get(
+        Uri.parse(
+          'http://apis.data.go.kr/B551011/KorWithService1/detailIntro1?serviceKey=K%2Bwrqt0w3kcqkpq5TzBHI8P37Kfk50Rlz1dYzc62tM2ltmIBDY3VG4eiblr%2FQbjw1JSXZYsFQBw4IieHP9cP9g%3D%3D&MobileOS=ETC&MobileApp=AppTest&contentId=${widget.contentId}&contentTypeId=${widget.contentTypeId}&_type=json',
+        ),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
 
-        var items = decodedData['response']?['body']?['items']?['item'];
+      if (commonResponse.statusCode == 200 && introResponse.statusCode == 200) {
+        // UTF-8 디코딩 처리
+        final commonData = json.decode(utf8.decode(commonResponse.bodyBytes));
+        final introData = json.decode(utf8.decode(introResponse.bodyBytes));
+
+        print('Common Response Body: ${utf8.decode(commonResponse.bodyBytes)}');
+        print('Intro Response Body: ${utf8.decode(introResponse.bodyBytes)}');
+
+        var commonItems = commonData['response']?['body']?['items']?['item'];
+        var introItems = introData['response']?['body']?['items']?['item'];
 
         // items가 없는 경우 처리
-        if (items == null || items.isEmpty) {
-          print('No items found for the given contentId: ${widget.contentId}');
+        if (commonItems == null || commonItems.isEmpty) {
+          print(
+              'No common items found for the given contentId: ${widget.contentId}');
           setState(() {
             _hasError = true;
             _contentDetails = null;
           });
-        } else {
-          var item = items[0]; // 첫 번째 항목 사용
-          setState(() {
-            _contentDetails = {
-              'opentimefood': item['opentimefood'],
-              'seat': item['seat'],
-              'infocenterfood': item['infocenterfood'],
-              'parkingfood': item['parkingfood'],
-              'overview': item['overview'],
-              'addr1': item['addr1'],
-              // HTML 태그를 제거한 홈페이지 링크
-              'homepage': removeHtmlTags(item['homepage']),
-            };
-          });
+          return;
         }
+
+        if (introItems == null || introItems.isEmpty) {
+          print(
+              'No intro items found for the given contentId: ${widget.contentId}');
+          setState(() {
+            _hasError = true;
+            _contentDetails = null;
+          });
+          return;
+        }
+
+        var commonItem = commonItems[0]; // 첫 번째 공통 정보 항목 사용
+        var introItem = introItems[0]; // 첫 번째 소개 정보 항목 사용
+
+        // 공통 정보와 소개 정보를 병합하여 setState에 반영
+        setState(() {
+          _contentDetails = {
+            'opentimefood': introItem['opentimefood'],
+            'seat': commonItem['seat'],
+            'tel': commonItem['tel'],
+            'parkingfood': introItem['parkingfood'],
+            'overview': commonItem['overview'],
+            'addr1': commonItem['addr1'],
+            'homepage': removeHtmlTags(commonItem['homepage']),
+            'infocenterfood': introItem['infocenterfood'], // 소개 정보에서 추가
+            'restdate': introItem['restdate'], // 소개 정보에서 추가
+            'usetime': introItem['usetime'], // 소개 정보에서 추가
+          };
+        });
       } else {
         setState(() {
           _hasError = true;
         });
-        print('Failed to load data. Status code: ${response.statusCode}');
+        print(
+            'Failed to load data. Status code: ${commonResponse.statusCode} or ${introResponse.statusCode}');
       }
     } catch (e) {
       setState(() {
@@ -117,7 +148,7 @@ class _InfoPageState extends State<InfoPage> {
           Divider(thickness: 0.7, color: Colors.grey),
           _buildInfoSection(
             icon: Icons.event_seat,
-            title: '좌석 정보',
+            title: '기본정보',
             content: _contentDetails?['overview'] ?? '정보 없음',
           ),
           Divider(thickness: 0.7, color: Colors.grey),
